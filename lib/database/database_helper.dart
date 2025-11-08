@@ -1,7 +1,11 @@
-import 'package:sqflite/sqflite.dart';
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
-import '../models/drug_record.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+import '../models/drug_record.dart';
 
 class DatabaseHelper {
   // Singleton pattern
@@ -14,7 +18,10 @@ class DatabaseHelper {
   Future<Database> get database async {
     // Initialize database factory once for desktop platforms
     if (!_initialized) {
-      databaseFactory = databaseFactoryFfi;
+      if (!kIsWeb &&
+          (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+        databaseFactory = databaseFactoryFfi;
+      }
       _initialized = true;
     }
     
