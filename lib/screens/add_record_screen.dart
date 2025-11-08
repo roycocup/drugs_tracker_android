@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../models/drug_record.dart';
 import '../database/database_helper.dart';
 import '../config/drug_config.dart';
+import '../theme/app_theme.dart';
 
 class AddRecordScreen extends StatefulWidget {
   const AddRecordScreen({super.key});
@@ -104,104 +105,133 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Add Drug Record')),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16.0),
-          children: [
-            // Drug Selection
-            DropdownMenu<String>(
-              initialSelection: _selectedDrug,
-              label: const Text('Drug'),
-              dropdownMenuEntries: DrugConfig.drugs.map((DrugConfig drug) {
-                return DropdownMenuEntry<String>(
-                  value: drug.name,
-                  label: '${drug.name} (${drug.tabletDoseMg.toInt()}mg)',
-                );
-              }).toList(),
-              onSelected: (String? newValue) {
-                setState(() {
-                  _selectedDrug = newValue;
-                });
-              },
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: AppTheme.backgroundGradient,
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: const Text('Add Drug Record'),
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: AppTheme.appBarGradient,
+              border: Border(
+                bottom: BorderSide(color: Colors.white10),
+              ),
             ),
-            const SizedBox(height: 24.0),
+          ),
+        ),
+        body: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
+            children: [
+              Text(
+                'Capture dosage, timing, and medication details so you can spot trends later.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.white70,
+                    ),
+              ),
+              const SizedBox(height: 28.0),
 
-            // Date Selection
-            InkWell(
-              onTap: () => _selectDate(context),
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Date',
-                  border: OutlineInputBorder(),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(DateFormat('yyyy-MM-dd').format(_selectedDate)),
-                    const Icon(Icons.calendar_today),
-                  ],
-                ),
+              // Drug Selection
+              DropdownMenu<String>(
+                initialSelection: _selectedDrug,
+                label: const Text('Drug'),
+                dropdownMenuEntries: DrugConfig.drugs.map((DrugConfig drug) {
+                  return DropdownMenuEntry<String>(
+                    value: drug.name,
+                    label: '${drug.name} (${drug.tabletDoseMg.toInt()}mg)',
+                  );
+                }).toList(),
+                onSelected: (String? newValue) {
+                  setState(() {
+                    _selectedDrug = newValue;
+                  });
+                },
               ),
-            ),
-            const SizedBox(height: 24.0),
+              const SizedBox(height: 24.0),
 
-            // Time Selection
-            InkWell(
-              onTap: () => _selectTime(context),
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Time',
-                  border: OutlineInputBorder(),
+              // Date Selection
+              InkWell(
+                onTap: () => _selectDate(context),
+                borderRadius: BorderRadius.circular(14),
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Date',
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(DateFormat('yyyy-MM-dd').format(_selectedDate)),
+                      Icon(
+                        Icons.calendar_today,
+                        color: Theme.of(context).colorScheme.secondary,
+                        size: 20,
+                      ),
+                    ],
+                  ),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(_selectedTime.format(context)),
-                    const Icon(Icons.access_time),
-                  ],
+              ),
+              const SizedBox(height: 24.0),
+
+              // Time Selection
+              InkWell(
+                onTap: () => _selectTime(context),
+                borderRadius: BorderRadius.circular(14),
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Time',
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(_selectedTime.format(context)),
+                      Icon(
+                        Icons.access_time,
+                        color: Theme.of(context).colorScheme.secondary,
+                        size: 20,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 24.0),
+              const SizedBox(height: 24.0),
 
-            // Dose Input
-            TextFormField(
-              controller: _doseController,
-              decoration: InputDecoration(
-                labelText: 'Dose',
-                hintText: _currentDrugConfig == null
-                    ? 'e.g., 1/2, 1/4, or a number'
-                    : 'e.g., 1/2 (${(_currentDrugConfig!.tabletDoseMg / 2).toStringAsFixed(0)}mg), 1/4, or mg',
-                helperText: _currentDrugConfig == null
-                    ? 'Select a drug first'
-                    : '1 tablet = ${_currentDrugConfig!.tabletDoseMg.toInt()}mg',
-                border: const OutlineInputBorder(),
+              // Dose Input
+              TextFormField(
+                controller: _doseController,
+                decoration: InputDecoration(
+                  labelText: 'Dose',
+                  hintText: _currentDrugConfig == null
+                      ? 'e.g., 1/2, 1/4, or a number'
+                      : 'e.g., 1/2 (${(_currentDrugConfig!.tabletDoseMg / 2).toStringAsFixed(0)}mg), 1/4, or mg',
+                  helperText: _currentDrugConfig == null
+                      ? 'Select a drug first'
+                      : '1 tablet = ${_currentDrugConfig!.tabletDoseMg.toInt()}mg',
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a dose';
+                  }
+                  // Validation will be done in _saveRecord for proper fraction handling
+                  return null;
+                },
               ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter a dose';
-                }
-                // Validation will be done in _saveRecord for proper fraction handling
-                return null;
-              },
-            ),
-            const SizedBox(height: 32.0),
+              const SizedBox(height: 36.0),
 
-            // Save Button
-            ElevatedButton(
-              onPressed: _saveRecord,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
+              // Save Button
+              ElevatedButton.icon(
+                onPressed: _saveRecord,
+                icon: const Icon(Icons.save_outlined),
+                label: const Text(
+                  'Save Record',
+                  style: TextStyle(fontSize: 16.0),
+                ),
               ),
-              child: const Text(
-                'Save Record',
-                style: TextStyle(fontSize: 16.0),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

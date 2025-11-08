@@ -24,7 +24,7 @@ class DatabaseHelper {
       }
       _initialized = true;
     }
-    
+
     if (_database != null) return _database!;
     _database = await _initDatabase();
     return _database!;
@@ -92,5 +92,37 @@ class DatabaseHelper {
   Future<int> deleteDrugRecord(int id) async {
     Database db = await database;
     return await db.delete('drug_records', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<Map<String, double>> getDoseTotalsByDrug({
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    if (end.isBefore(start)) {
+      return {};
+    }
+
+    final db = await database;
+    final results = await db.rawQuery(
+      '''
+      SELECT drug_name, SUM(dose) as total_dose
+      FROM drug_records
+      WHERE date_time BETWEEN ? AND ?
+      GROUP BY drug_name
+      ORDER BY drug_name ASC
+      ''',
+      [start.toIso8601String(), end.toIso8601String()],
+    );
+
+    final totals = <String, double>{};
+    for (final row in results) {
+      final name = row['drug_name'] as String?;
+      final total = row['total_dose'] as num?;
+      if (name != null && total != null) {
+        totals[name] = total.toDouble();
+      }
+    }
+
+    return totals;
   }
 }
