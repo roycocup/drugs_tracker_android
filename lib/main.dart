@@ -255,22 +255,7 @@ class _DrugTrackerHomeState extends State<DrugTrackerHome>
         backgroundColor: Colors.transparent,
         appBar: AppBar(
           titleSpacing: 24,
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text('Drug Tracker'),
-              SizedBox(height: 2),
-              Text(
-                'Stay ahead of your regimen',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.white70,
-                  letterSpacing: 0.4,
-                ),
-              ),
-            ],
-          ),
+          title: const SafeArea(bottom: false, child: SizedBox(height: 36)),
           flexibleSpace: Container(
             decoration: const BoxDecoration(
               gradient: AppTheme.appBarGradient,
