@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../models/drug_record.dart';
 import '../database/database_helper.dart';
-import '../config/drug_config.dart';
+import '../models/drug.dart';
+import '../models/drug_record.dart';
 import '../theme/app_theme.dart';
 
 class AddRecordScreen extends StatefulWidget {
@@ -17,12 +17,46 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
   final _doseController = TextEditingController();
 
   String? _selectedDrug;
+  List<Drug> _availableDrugs = [];
+  bool _isLoadingDrugs = true;
   DateTime _selectedDate = DateTime.now();
   TimeOfDay _selectedTime = TimeOfDay.now();
 
-  DrugConfig? get _currentDrugConfig {
+  @override
+  void initState() {
+    super.initState();
+    _loadDrugs();
+  }
+
+  Future<void> _loadDrugs() async {
+    final drugs = await DatabaseHelper.instance.getAllDrugs();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _availableDrugs = drugs;
+      if (_selectedDrug != null &&
+          !_availableDrugs.any((drug) => drug.name == _selectedDrug)) {
+        _selectedDrug = null;
+      }
+      _isLoadingDrugs = false;
+    });
+  }
+
+  Drug? get _currentDrug {
     if (_selectedDrug == null) return null;
-    return DrugConfig.getDrugByName(_selectedDrug!);
+    for (final drug in _availableDrugs) {
+      if (drug.name == _selectedDrug) {
+        return drug;
+      }
+    }
+    return null;
+  }
+
+  String _formatDose(double value) {
+    return value % 1 == 0
+        ? value.toStringAsFixed(0)
+        : value.toStringAsFixed(1);
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -53,7 +87,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
 
   Future<void> _saveRecord() async {
     if (_formKey.currentState!.validate()) {
-      if (_selectedDrug == null || _currentDrugConfig == null) {
+      if (_selectedDrug == null || _currentDrug == null) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Please select a drug')));
@@ -62,7 +96,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
 
       // Convert dose input to mg (handles fractions like "1/2" or plain numbers)
       final doseString = _doseController.text.trim();
-      final doseInMg = _currentDrugConfig!.convertFractionToMg(doseString);
+      final doseInMg = _currentDrug!.convertFractionToMg(doseString);
       
       if (doseInMg == null || doseInMg <= 0) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -136,21 +170,46 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
               const SizedBox(height: 28.0),
 
               // Drug Selection
-              DropdownMenu<String>(
-                initialSelection: _selectedDrug,
-                label: const Text('Drug'),
-                dropdownMenuEntries: DrugConfig.drugs.map((DrugConfig drug) {
-                  return DropdownMenuEntry<String>(
-                    value: drug.name,
-                    label: '${drug.name} (${drug.tabletDoseMg.toInt()}mg)',
-                  );
-                }).toList(),
-                onSelected: (String? newValue) {
-                  setState(() {
-                    _selectedDrug = newValue;
-                  });
-                },
-              ),
+              if (_isLoadingDrugs)
+                const SizedBox(
+                  height: 56,
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (_availableDrugs.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white12),
+                  ),
+                  child: Text(
+                    'No drugs available. Add drugs in the settings tab before creating records.',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: Colors.white70),
+                  ),
+                )
+              else
+                DropdownMenu<String>(
+                  initialSelection: _selectedDrug,
+                  label: const Text('Drug'),
+                  dropdownMenuEntries: _availableDrugs.map((Drug drug) {
+                    final doseText = drug.tabletDoseMg % 1 == 0
+                        ? drug.tabletDoseMg.toStringAsFixed(0)
+                        : drug.tabletDoseMg.toStringAsFixed(1);
+                    return DropdownMenuEntry<String>(
+                      value: drug.name,
+                      label: '${drug.name} (${doseText}mg)',
+                    );
+                  }).toList(),
+                  onSelected: (String? newValue) {
+                    setState(() {
+                      _selectedDrug = newValue;
+                    });
+                  },
+                ),
               const SizedBox(height: 24.0),
 
               // Date Selection
@@ -204,12 +263,12 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                 controller: _doseController,
                 decoration: InputDecoration(
                   labelText: 'Dose',
-                  hintText: _currentDrugConfig == null
+                  hintText: _currentDrug == null
                       ? 'e.g., 1/2, 1/4, or a number'
-                      : 'e.g., 1/2 (${(_currentDrugConfig!.tabletDoseMg / 2).toStringAsFixed(0)}mg), 1/4, or mg',
-                  helperText: _currentDrugConfig == null
+                      : 'e.g., 1/2 (${_formatDose(_currentDrug!.tabletDoseMg / 2)}mg), 1/4, or mg',
+                  helperText: _currentDrug == null
                       ? 'Select a drug first'
-                      : '1 tablet = ${_currentDrugConfig!.tabletDoseMg.toInt()}mg',
+                      : '1 tablet = ${_formatDose(_currentDrug!.tabletDoseMg)}mg',
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {

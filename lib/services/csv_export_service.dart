@@ -6,14 +6,18 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 
-import '../config/drug_config.dart';
+import '../database/database_helper.dart';
+import '../models/drug.dart';
 import '../models/drug_record.dart';
 
 class CsvExportService {
   CsvExportService._();
 
-  static String _formatQuantity(DrugRecord record) {
-    final config = DrugConfig.getDrugByName(record.drugName);
+  static String _formatQuantity(
+    DrugRecord record,
+    Map<String, Drug> drugCatalog,
+  ) {
+    final config = drugCatalog[record.drugName];
     if (config != null) {
       final fraction = config.convertMgToFraction(record.dose);
       if (fraction.contains('/')) {
@@ -27,7 +31,10 @@ class CsvExportService {
     return record.dose.toStringAsFixed(1);
   }
 
-  static String generateCsvContent(List<DrugRecord> records) {
+  static Future<String> generateCsvContent(List<DrugRecord> records) async {
+    final drugs = await DatabaseHelper.instance.getAllDrugs();
+    final drugCatalog = {for (final drug in drugs) drug.name: drug};
+
     final buffer = StringBuffer()
       ..writeln('Timestamp,Drug name,Quantity,When,Time');
     final dateFormatter = DateFormat('dd/MM/yyyy');
@@ -36,7 +43,7 @@ class CsvExportService {
     for (final record in records) {
       final timestamp = record.dateTime.toIso8601String();
       final drugName = _escapeCsv(record.drugName);
-      final quantity = _escapeCsv(_formatQuantity(record));
+      final quantity = _escapeCsv(_formatQuantity(record, drugCatalog));
       final when = dateFormatter.format(record.dateTime);
       final time = timeFormatter.format(record.dateTime);
 
@@ -58,7 +65,7 @@ class CsvExportService {
     final defaultFileName =
         'drug_records_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.csv';
     final isMobile = Platform.isAndroid || Platform.isIOS;
-    final csvContent = generateCsvContent(records);
+    final csvContent = await generateCsvContent(records);
     final csvBytes = Uint8List.fromList(utf8.encode(csvContent));
 
     String? savePath = await FilePicker.platform.saveFile(

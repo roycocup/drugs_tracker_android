@@ -1,24 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../models/drug.dart';
 import '../models/drug_record.dart';
 import '../theme/app_theme.dart';
 import '../utils/relative_date_formatter.dart';
-import '../config/drug_config.dart';
 
 class RecordListItem extends StatelessWidget {
   final DrugRecord record;
+  final Drug? drug;
   final VoidCallback onDelete;
 
   const RecordListItem({
     super.key,
     required this.record,
+    this.drug,
     required this.onDelete,
   });
 
-  Widget _buildDoseLabel(DrugRecord record) {
-    final drugConfig = DrugConfig.getDrugByName(record.drugName);
-    if (drugConfig != null) {
-      final fractionText = drugConfig.convertMgToFraction(record.dose);
+  Widget _buildDoseLabel() {
+    if (drug != null) {
+      final fractionText = drug!.convertMgToFraction(record.dose);
       // If it's a fraction like "1/2", add mg equivalent for clarity
       if (fractionText.contains('/')) {
         return Text('$fractionText (${record.dose.toStringAsFixed(1)}mg)');
@@ -108,7 +109,7 @@ class RecordListItem extends StatelessWidget {
                   color: Colors.white,
                   fontWeight: FontWeight.w600,
                 ),
-                label: _buildDoseLabel(record),
+                label: _buildDoseLabel(),
               ),
               const SizedBox(width: 8),
               IconButton(

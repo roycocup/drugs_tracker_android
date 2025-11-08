@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
+import '../database/database_helper.dart';
 import '../models/drug_record.dart';
-import '../config/drug_config.dart';
 
 class CsvImportService {
   /// Parses a CSV file and converts it to DrugRecord objects
@@ -21,6 +21,9 @@ class CsvImportService {
     if (lines.isEmpty) {
       throw Exception('CSV file is empty');
     }
+
+    final drugCatalog = await DatabaseHelper.instance.getAllDrugs();
+    final drugByName = {for (final drug in drugCatalog) drug.name: drug};
 
     // Parse header
     final headerLine = lines[0].trim();
@@ -58,7 +61,7 @@ class CsvImportService {
         if (quantity.isEmpty) continue;
 
         // Determine the drug configuration
-        final drugConfig = DrugConfig.getDrugByName(drugName);
+        final drugConfig = drugByName[drugName];
         if (drugConfig == null) {
           throw Exception('Unknown drug: $drugName');
         }

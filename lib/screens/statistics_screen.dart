@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../config/drug_config.dart';
 import '../database/database_helper.dart';
+import '../models/drug.dart';
 
 class StatisticsScreen extends StatefulWidget {
   const StatisticsScreen({super.key});
@@ -19,6 +19,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   Map<String, (String label, DateTimeRange range)> _presetRanges = {};
   Map<String, Map<String, double>> _presetTotals = {};
   Map<String, double>? _customTotals;
+  Map<String, Drug> _drugByName = {};
 
   @override
   void initState() {
@@ -77,6 +78,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
 
     final ranges = _buildPresetRanges(DateTime.now());
     final totals = <String, Map<String, double>>{};
+    final drugs = await DatabaseHelper.instance.getAllDrugs();
+    final drugMap = {for (final drug in drugs) drug.name: drug};
 
     for (final entry in ranges.entries) {
       totals[entry.key] = await DatabaseHelper.instance.getDoseTotalsByDrug(
@@ -90,6 +93,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     }
 
     setState(() {
+      _drugByName = drugMap;
       _presetRanges = ranges;
       _presetTotals = totals;
       _isLoading = false;
@@ -106,7 +110,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   }
 
   String _formatDose(String drugName, double totalMg) {
-    final config = DrugConfig.getDrugByName(drugName);
+    final config = _drugByName[drugName];
     final mgText = '${totalMg.toStringAsFixed(1)} mg';
 
     if (config == null || config.tabletDoseMg <= 0) {
