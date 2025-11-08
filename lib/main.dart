@@ -3,6 +3,7 @@ import 'database/database_helper.dart';
 import 'models/drug_record.dart';
 import 'screens/add_record_screen.dart';
 import 'widgets/record_list_item.dart';
+import 'services/csv_export_service.dart';
 import 'services/csv_import_service.dart';
 
 Future<void> main() async {
@@ -143,6 +144,52 @@ class _DrugTrackerHomeState extends State<DrugTrackerHome> {
     }
   }
 
+  Future<void> _exportToCsv() async {
+    if (_records.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No records available to export')),
+        );
+      }
+      return;
+    }
+
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final exportedPath = await CsvExportService.exportToCsvFile(
+        List.of(_records),
+      );
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('CSV exported to $exportedPath')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        if (e.toString().contains('cancelled by user')) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('CSV export cancelled')));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Export failed: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -154,6 +201,11 @@ class _DrugTrackerHomeState extends State<DrugTrackerHome> {
             icon: const Icon(Icons.upload_file),
             tooltip: 'Import CSV',
             onPressed: _importFromCsv,
+          ),
+          IconButton(
+            icon: const Icon(Icons.download),
+            tooltip: 'Export CSV',
+            onPressed: _exportToCsv,
           ),
         ],
       ),
