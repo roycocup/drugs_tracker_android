@@ -6,7 +6,9 @@ import '../models/drug_record.dart';
 import '../theme/app_theme.dart';
 
 class AddRecordScreen extends StatefulWidget {
-  const AddRecordScreen({super.key});
+  final DrugRecord? record;
+
+  const AddRecordScreen({super.key, this.record});
 
   @override
   State<AddRecordScreen> createState() => _AddRecordScreenState();
@@ -22,9 +24,24 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
   DateTime _selectedDate = DateTime.now();
   TimeOfDay _selectedTime = TimeOfDay.now();
 
+  bool get _isEditing => widget.record != null;
+
   @override
   void initState() {
     super.initState();
+    if (widget.record != null) {
+      final record = widget.record!;
+      _selectedDrug = record.drugName;
+      _selectedDate = DateTime(
+        record.dateTime.year,
+        record.dateTime.month,
+        record.dateTime.day,
+      );
+      _selectedTime = TimeOfDay.fromDateTime(record.dateTime);
+      _doseController.text = record.dose % 1 == 0
+          ? record.dose.toStringAsFixed(0)
+          : record.dose.toStringAsFixed(1);
+    }
     _loadDrugs();
   }
 
@@ -116,13 +133,21 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
         _selectedTime.minute,
       );
 
-      final record = DrugRecord(
-        drugName: _selectedDrug!,
-        dateTime: dateTime,
-        dose: doseInMg,
-      );
-
-      await DatabaseHelper.instance.insertDrugRecord(record);
+      if (_isEditing) {
+        final updatedRecord = widget.record!.copyWith(
+          drugName: _selectedDrug!,
+          dateTime: dateTime,
+          dose: doseInMg,
+        );
+        await DatabaseHelper.instance.updateDrugRecord(updatedRecord);
+      } else {
+        final record = DrugRecord(
+          drugName: _selectedDrug!,
+          dateTime: dateTime,
+          dose: doseInMg,
+        );
+        await DatabaseHelper.instance.insertDrugRecord(record);
+      }
 
       if (mounted) {
         Navigator.pop(
@@ -146,7 +171,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
-          title: const Text('Add Drug Record'),
+          title: Text(_isEditing ? 'Edit Drug Record' : 'Add Drug Record'),
           flexibleSpace: Container(
             decoration: const BoxDecoration(
               gradient: AppTheme.appBarGradient,
@@ -279,10 +304,12 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
               // Save Button
               ElevatedButton.icon(
                 onPressed: _saveRecord,
-                icon: const Icon(Icons.save_outlined),
-                label: const Text(
-                  'Save Record',
-                  style: TextStyle(fontSize: 16.0),
+                icon: Icon(
+                  _isEditing ? Icons.check_circle_outline : Icons.save_outlined,
+                ),
+                label: Text(
+                  _isEditing ? 'Update Record' : 'Save Record',
+                  style: const TextStyle(fontSize: 16.0),
                 ),
               ),
             ],

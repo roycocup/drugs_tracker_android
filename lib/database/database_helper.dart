@@ -231,6 +231,20 @@ class DatabaseHelper {
     return List.generate(maps.length, (i) => DrugRecord.fromMap(maps[i]));
   }
 
+  Future<List<DrugRecord>> getDrugRecordsPaginated({
+    required int limit,
+    required int offset,
+  }) async {
+    final db = await database;
+    final results = await db.query(
+      'drug_records',
+      orderBy: 'date_time DESC',
+      limit: limit,
+      offset: offset,
+    );
+    return results.map(DrugRecord.fromMap).toList();
+  }
+
   // Update a drug record
   Future<int> updateDrugRecord(DrugRecord record) async {
     Database db = await database;

@@ -26,6 +26,10 @@ class _DrugTrackerHomeState extends State<DrugTrackerHome>
   bool _isLoading = true;
   Map<String, Drug> _drugLookup = {};
   late final TabController _tabController;
+  late final ScrollController _scrollController;
+  bool _isLoadingMore = false;
+  bool _hasMoreRecords = true;
+  static const int _pageSize = 25;
 
   @override
   void initState() {
@@ -36,12 +40,15 @@ class _DrugTrackerHomeState extends State<DrugTrackerHome>
           setState(() {});
         }
       });
+    _scrollController = ScrollController()..addListener(_onScroll);
     _loadDrugs();
     _loadRecords();
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _tabController.dispose();
     super.dispose();
   }
@@ -59,9 +66,15 @@ class _DrugTrackerHomeState extends State<DrugTrackerHome>
   Future<void> _loadRecords() async {
     setState(() {
       _isLoading = true;
+      _isLoadingMore = false;
+      _hasMoreRecords = true;
+      _records = [];
     });
 
-    final records = await DatabaseHelper.instance.getAllDrugRecords();
+    final records = await DatabaseHelper.instance.getDrugRecordsPaginated(
+      limit: _pageSize,
+      offset: 0,
+    );
 
     if (!mounted) {
       return;
@@ -70,7 +83,48 @@ class _DrugTrackerHomeState extends State<DrugTrackerHome>
     setState(() {
       _records = records;
       _isLoading = false;
+      _hasMoreRecords = records.length == _pageSize;
     });
+  }
+
+  Future<void> _loadMoreRecords() async {
+    if (_isLoading || _isLoadingMore || !_hasMoreRecords) {
+      return;
+    }
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    final records = await DatabaseHelper.instance.getDrugRecordsPaginated(
+      limit: _pageSize,
+      offset: _records.length,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _records = [..._records, ...records];
+      _isLoadingMore = false;
+      if (records.length < _pageSize) {
+        _hasMoreRecords = false;
+      }
+    });
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients ||
+        _isLoading ||
+        _isLoadingMore ||
+        !_hasMoreRecords) {
+      return;
+    }
+
+    if (_scrollController.position.extentAfter < 200) {
+      _loadMoreRecords();
+    }
   }
 
   Future<void> _deleteRecord(DrugRecord record) async {
@@ -105,6 +159,21 @@ class _DrugTrackerHomeState extends State<DrugTrackerHome>
     final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(builder: (context) => const AddRecordScreen()),
+    );
+
+    if (result == true) {
+      _loadRecords();
+    }
+  }
+
+  Future<void> _editRecord(DrugRecord record) async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddRecordScreen(
+          record: record,
+        ),
+      ),
     );
 
     if (result == true) {
@@ -218,13 +287,26 @@ class _DrugTrackerHomeState extends State<DrugTrackerHome>
       onRefresh: _loadRecords,
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(vertical: 16),
-        itemCount: _records.length,
+        controller: _scrollController,
+        itemCount: _records.length + (_hasMoreRecords ? 1 : 0),
         itemBuilder: (context, index) {
+          if (index >= _records.length) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: _isLoadingMore
+                    ? const CircularProgressIndicator()
+                    : const SizedBox(height: 24),
+              ),
+            );
+          }
+
           final record = _records[index];
           return RecordListItem(
             record: record,
             drug: _drugLookup[record.drugName],
             onDelete: () => _deleteRecord(record),
+            onEdit: () => _editRecord(record),
           );
         },
       ),
