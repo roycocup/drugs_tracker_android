@@ -54,9 +54,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
   }
 
   String _formatDose(double value) {
-    return value % 1 == 0
-        ? value.toStringAsFixed(0)
-        : value.toStringAsFixed(1);
+    return value % 1 == 0 ? value.toStringAsFixed(0) : value.toStringAsFixed(1);
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -97,10 +95,14 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
       // Convert dose input to mg (handles fractions like "1/2" or plain numbers)
       final doseString = _doseController.text.trim();
       final doseInMg = _currentDrug!.convertFractionToMg(doseString);
-      
+
       if (doseInMg == null || doseInMg <= 0) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter a valid dose (e.g., 1/2, 1/4, or a number)')),
+          const SnackBar(
+            content: Text(
+              'Please enter a valid dose (e.g., 1/2, 1/4, or a number)',
+            ),
+          ),
         );
         return;
       }
@@ -140,9 +142,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: AppTheme.backgroundGradient,
-      ),
+      decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
@@ -150,22 +150,23 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
           flexibleSpace: Container(
             decoration: const BoxDecoration(
               gradient: AppTheme.appBarGradient,
-              border: Border(
-                bottom: BorderSide(color: Colors.white10),
-              ),
+              border: Border(bottom: BorderSide(color: Colors.white10)),
             ),
           ),
         ),
         body: Form(
           key: _formKey,
           child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20.0,
+              vertical: 24.0,
+            ),
             children: [
               Text(
                 'Capture dosage, timing, and medication details so you can spot trends later.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.white70,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
               ),
               const SizedBox(height: 28.0),
 
@@ -179,16 +180,15 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.08),
+                    color: Colors.white.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: Colors.white12),
                   ),
                   child: Text(
                     'No drugs available. Add drugs in the settings tab before creating records.',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: Colors.white70),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
                   ),
                 )
               else
@@ -217,9 +217,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                 onTap: () => _selectDate(context),
                 borderRadius: BorderRadius.circular(14),
                 child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Date',
-                  ),
+                  decoration: const InputDecoration(labelText: 'Date'),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -240,9 +238,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                 onTap: () => _selectTime(context),
                 borderRadius: BorderRadius.circular(14),
                 child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Time',
-                  ),
+                  decoration: const InputDecoration(labelText: 'Time'),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [

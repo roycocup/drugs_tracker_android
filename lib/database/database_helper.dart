@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../config/drug_config.dart';
@@ -70,6 +69,14 @@ class DatabaseHelper {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT NOT NULL UNIQUE,
           tablet_dose REAL NOT NULL
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS drug_records(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          drug_name TEXT NOT NULL,
+          date_time TEXT NOT NULL,
+          dose REAL NOT NULL
         )
       ''');
       await _seedDefaultDrugs(db);

@@ -1,7 +1,16 @@
+import 'dart:async';
+import 'dart:ui';
+
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 
+import 'config/app_config.dart';
 import 'database/database_helper.dart';
+import 'firebase_options.dart';
 import 'models/drug.dart';
 import 'models/drug_record.dart';
 import 'services/csv_export_service.dart';
@@ -11,10 +20,59 @@ import 'screens/statistics_screen.dart';
 import 'theme/app_theme.dart';
 import 'widgets/record_list_item.dart';
 
+FirebaseAnalytics? _analytics;
+bool _crashlyticsAvailable = false;
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await _initializeObservability();
   await DatabaseHelper.instance.database;
-  runApp(const MyApp());
+  runZonedGuarded(() => runApp(const MyApp()), (error, stack) {
+    if (_crashlyticsAvailable) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    } else if (kDebugMode) {
+      debugPrint('Unhandled zone error: $error');
+      debugPrintStack(stackTrace: stack);
+    }
+  });
+}
+
+Future<void> _initializeObservability() async {
+  if (!AppConfig.enableCrashReporting && !AppConfig.enableAnalytics) {
+    return;
+  }
+
+  try {
+    final options = DefaultFirebaseOptions.currentPlatform;
+    if (Firebase.apps.isEmpty) {
+      if (options != null) {
+        await Firebase.initializeApp(options: options);
+      } else {
+        await Firebase.initializeApp();
+      }
+    }
+
+    if (AppConfig.enableCrashReporting) {
+      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
+      FlutterError.onError =
+          FirebaseCrashlytics.instance.recordFlutterFatalError;
+      PlatformDispatcher.instance.onError = (error, stack) {
+        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+        return true;
+      };
+      _crashlyticsAvailable = true;
+    }
+
+    if (AppConfig.enableAnalytics) {
+      _analytics = FirebaseAnalytics.instance;
+      await _analytics!.setAnalyticsCollectionEnabled(true);
+    }
+  } catch (error, stack) {
+    debugPrint('Firebase initialization skipped: $error');
+    if (kDebugMode) {
+      debugPrintStack(stackTrace: stack);
+    }
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -25,6 +83,10 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Drug Tracker',
       theme: AppTheme.buildTheme(),
+      navigatorObservers: [
+        if (_analytics != null)
+          FirebaseAnalyticsObserver(analytics: _analytics!),
+      ],
       home: const DrugTrackerHome(),
     );
   }
@@ -79,6 +141,10 @@ class _DrugTrackerHomeState extends State<DrugTrackerHome>
     });
 
     final records = await DatabaseHelper.instance.getAllDrugRecords();
+
+    if (!mounted) {
+      return;
+    }
 
     setState(() {
       _records = records;
@@ -268,7 +334,7 @@ class _DrugTrackerHomeState extends State<DrugTrackerHome>
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.08),
+                  color: Colors.white.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: Colors.white24),
                 ),
@@ -498,7 +564,7 @@ class _SettingsTabState extends State<_SettingsTab> {
                     originalName: drug.name,
                   );
                 }
-                if (mounted) {
+                if (dialogContext.mounted) {
                   Navigator.of(dialogContext).pop(true);
                 }
               } on DatabaseException catch (e) {
@@ -678,7 +744,7 @@ class _SettingsTabState extends State<_SettingsTab> {
   }
 
   Widget _buildDrugManagementCard(BuildContext context) {
-    final cardColor = Colors.white.withOpacity(0.08);
+    final cardColor = Colors.white.withValues(alpha: 0.08);
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       color: cardColor,
@@ -747,7 +813,7 @@ class _SettingsTabState extends State<_SettingsTab> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
-            color: Colors.white.withOpacity(0.08),
+            color: Colors.white.withValues(alpha: 0.08),
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(

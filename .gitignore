@@ -43,3 +43,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Android release signing config (generated locally)
+/android/key.properties
+# Firebase config files (never commit real project credentials)
+/android/app/google-services.json

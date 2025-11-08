@@ -63,7 +63,7 @@ class RecordListItem extends StatelessWidget {
           ),
           leading: CircleAvatar(
             radius: 26,
-            backgroundColor: colorScheme.secondary.withOpacity(0.2),
+            backgroundColor: colorScheme.secondary.withValues(alpha: 0.2),
             child: Text(
               record.drugName[0],
               style: TextStyle(
@@ -104,7 +104,7 @@ class RecordListItem extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Chip(
-                backgroundColor: colorScheme.primary.withOpacity(0.18),
+                backgroundColor: colorScheme.primary.withValues(alpha: 0.18),
                 labelStyle: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w600,

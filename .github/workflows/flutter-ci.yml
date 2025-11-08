@@ -1,0 +1,52 @@
+name: Flutter CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.4'
+          channel: stable
+
+      - name: Flutter Pub Get
+        run: flutter pub get
+
+      - name: Flutter Format Check
+        run: flutter format --set-exit-if-changed .
+
+      - name: Flutter Analyze
+        run: flutter analyze
+
+      - name: Run Unit & Widget Tests
+        run: flutter test
+
+      - name: Run Integration Tests
+        run: flutter test integration_test
+
+      - name: Build Android App Bundle
+        run: flutter build appbundle --release --dart-define=APP_ENV=ci --dart-define=ENABLE_CRASH_REPORTING=false --dart-define=ENABLE_ANALYTICS=false
+
+      - name: Upload App Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: build/app/outputs/bundle/release/app-release.aab
+

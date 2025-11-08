@@ -1,5 +1,8 @@
 import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
+
 import '../database/database_helper.dart';
 import '../models/drug_record.dart';
 
@@ -112,7 +115,7 @@ class CsvImportService {
         records.add(record);
       } catch (e) {
         // Log error but continue parsing other rows
-        print('Error parsing row ${i + 1}: $e');
+        debugPrint('Error parsing row ${i + 1}: $e');
       }
     }
 

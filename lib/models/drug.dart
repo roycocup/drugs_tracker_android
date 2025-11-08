@@ -70,7 +70,7 @@ class Drug {
     }
 
     if ((mg - tabletDoseMg).abs() < 0.001) {
-      return '${tabletDoseMg.toStringAsFixed(2)}';
+      return tabletDoseMg.toStringAsFixed(2);
     }
 
     return mg.toStringAsFixed(2);

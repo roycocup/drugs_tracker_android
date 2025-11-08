@@ -36,10 +36,8 @@ class AppTheme {
       primary: primary,
       secondary: secondary,
       tertiary: const Color(0xFF4AD4D9),
-      background: backgroundStart,
       surface: surface,
-      surfaceVariant: surfaceVariant,
-      onBackground: Colors.white,
+      surfaceContainerHighest: surfaceVariant,
       onSurface: Colors.white,
       primaryContainer: const Color(0xFF2D1A78),
       onPrimaryContainer: Colors.white,
@@ -78,7 +76,7 @@ class AppTheme {
         ),
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: secondary.withOpacity(0.18),
+        backgroundColor: secondary.withValues(alpha: 0.18),
         labelStyle: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.w600,
@@ -141,8 +139,8 @@ class AppTheme {
           ),
         ),
         menuStyle: MenuStyle(
-          backgroundColor: MaterialStatePropertyAll(surface),
-          shape: MaterialStatePropertyAll(
+          backgroundColor: WidgetStatePropertyAll(surface),
+          shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),
@@ -150,7 +148,7 @@ class AppTheme {
         ),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: surfaceVariant,
+        backgroundColor: colorScheme.surfaceContainerHighest,
         contentTextStyle: const TextStyle(color: Colors.white),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
