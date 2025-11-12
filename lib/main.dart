@@ -10,6 +10,7 @@ import 'config/app_config.dart';
 import 'database/database_helper.dart';
 import 'firebase_options.dart';
 import 'screens/drug_tracker_home.dart';
+import 'services/user_identity_service.dart';
 import 'theme/app_theme.dart';
 
 FirebaseAnalytics? _analytics;
@@ -20,8 +21,9 @@ Future<void> main() async {
     () async {
       WidgetsFlutterBinding.ensureInitialized();
       await _initializeObservability();
-      await DatabaseHelper.instance.database;
-      runApp(const MyApp());
+      final identity = await UserIdentityService.instance.getOrCreateIdentity();
+      await DatabaseHelper.instance.configureForUser(identity.userId);
+      runApp(MyApp(initialIdentity: identity));
     },
     (error, stack) {
       if (_crashlyticsAvailable) {
@@ -73,7 +75,9 @@ Future<void> _initializeObservability() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, required this.initialIdentity});
+
+  final UserIdentity initialIdentity;
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +89,7 @@ class MyApp extends StatelessWidget {
         if (_analytics != null)
           FirebaseAnalyticsObserver(analytics: _analytics!),
       ],
-      home: const DrugTrackerHome(),
+      home: DrugTrackerHome(initialIdentity: initialIdentity),
     );
   }
 }

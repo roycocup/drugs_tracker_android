@@ -1,21 +1,27 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
 
 import 'package:drugs_taken/database/database_helper.dart';
 import 'package:drugs_taken/models/drug.dart';
+import 'package:drugs_taken/services/user_identity_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   final Future<void> Function() onImport;
   final Future<void> Function() onExport;
   final Future<void> Function()? onDrugsChanged;
+  final UserIdentity identity;
+  final Future<UserIdentity> Function(String mnemonic) onImportMnemonic;
 
   const SettingsScreen({
     super.key,
     required this.onImport,
     required this.onExport,
     this.onDrugsChanged,
+    required this.identity,
+    required this.onImportMnemonic,
   });
 
   @override
@@ -25,11 +31,244 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _isLoadingDrugs = true;
   List<Drug> _drugs = [];
+  late UserIdentity _identity;
 
   @override
   void initState() {
     super.initState();
+    _identity = widget.identity;
     _loadDrugs();
+  }
+
+  @override
+  void didUpdateWidget(covariant SettingsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.identity.userId != widget.identity.userId ||
+        oldWidget.identity.mnemonic != widget.identity.mnemonic) {
+      setState(() {
+        _identity = widget.identity;
+      });
+      _loadDrugs();
+    }
+  }
+
+  Future<void> _promptImportMnemonic() async {
+    final controller = TextEditingController();
+    String? errorText;
+    bool isSubmitting = false;
+    UserIdentity? importedIdentity;
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> handleSubmit() async {
+              final mnemonic = controller.text.trim();
+              if (mnemonic.isEmpty) {
+                setDialogState(() {
+                  errorText = 'Mnemonic is required.';
+                });
+                return;
+              }
+              setDialogState(() {
+                errorText = null;
+                isSubmitting = true;
+              });
+              try {
+                final identity = await widget.onImportMnemonic(mnemonic);
+                importedIdentity = identity;
+                if (dialogContext.mounted) {
+                  Navigator.of(dialogContext).pop(true);
+                }
+              } on InvalidMnemonicException catch (error) {
+                setDialogState(() {
+                  errorText = error.message;
+                  isSubmitting = false;
+                });
+              } catch (_) {
+                setDialogState(() {
+                  errorText = 'Failed to import mnemonic. Please try again.';
+                  isSubmitting = false;
+                });
+              }
+            }
+
+            return AlertDialog(
+              title: const Text('Import Mnemonic'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Paste the 12-word mnemonic associated with your account.',
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: controller,
+                    minLines: 2,
+                    maxLines: 4,
+                    textInputAction: TextInputAction.done,
+                    decoration: InputDecoration(
+                      labelText: 'Mnemonic',
+                      hintText: 'example: word1 word2 ... word12',
+                      errorText: errorText,
+                    ),
+                    enabled: !isSubmitting,
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: isSubmitting ? null : handleSubmit,
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Import'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result == true && importedIdentity != null && mounted) {
+      setState(() {
+        _identity = importedIdentity!;
+      });
+      await _loadDrugs();
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Mnemonic imported successfully')),
+      );
+    }
+  }
+
+  Future<void> _copyToClipboard(String value, String message) async {
+    await Clipboard.setData(ClipboardData(text: value));
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Widget _buildIdentityCard(BuildContext context) {
+    final cardColor = Colors.white.withValues(alpha: 0.08);
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      color: cardColor,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Account',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Store this mnemonic safely. You will need it to access your data on another device.',
+              style: TextStyle(color: Colors.white70),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white24),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: SelectableText(
+                      _identity.mnemonic,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Copy mnemonic',
+                    onPressed: () => _copyToClipboard(
+                      _identity.mnemonic,
+                      'Mnemonic copied to clipboard',
+                    ),
+                    icon: const Icon(Icons.copy, color: Colors.white70),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'User ID',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white24),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: SelectableText(
+                      _identity.userId,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        height: 1.4,
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Copy user ID',
+                    onPressed: () => _copyToClipboard(
+                      _identity.userId,
+                      'User ID copied to clipboard',
+                    ),
+                    icon: const Icon(Icons.copy, color: Colors.white70),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: _promptImportMnemonic,
+              icon: const Icon(Icons.key),
+              label: const Text('Import Mnemonic'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _loadDrugs() async {
@@ -336,6 +575,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       padding: const EdgeInsets.all(16),
       child: ListView(
         children: [
+          _buildIdentityCard(context),
+          const SizedBox(height: 16),
           _buildDrugManagementCard(context),
           const SizedBox(height: 16),
           Card(
@@ -392,4 +633,3 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 }
-

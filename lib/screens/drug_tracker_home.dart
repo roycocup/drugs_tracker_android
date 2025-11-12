@@ -10,11 +10,14 @@ import 'package:drugs_taken/screens/settings_screen.dart';
 import 'package:drugs_taken/screens/statistics_screen.dart';
 import 'package:drugs_taken/services/csv_export_service.dart';
 import 'package:drugs_taken/services/csv_import_service.dart';
+import 'package:drugs_taken/services/user_identity_service.dart';
 import 'package:drugs_taken/theme/app_theme.dart';
 import 'package:drugs_taken/widgets/record_list_item.dart';
 
 class DrugTrackerHome extends StatefulWidget {
-  const DrugTrackerHome({super.key});
+  const DrugTrackerHome({super.key, required this.initialIdentity});
+
+  final UserIdentity initialIdentity;
 
   @override
   State<DrugTrackerHome> createState() => _DrugTrackerHomeState();
@@ -30,10 +33,12 @@ class _DrugTrackerHomeState extends State<DrugTrackerHome>
   bool _isLoadingMore = false;
   bool _hasMoreRecords = true;
   static const int _pageSize = 25;
+  late UserIdentity _identity;
 
   @override
   void initState() {
     super.initState();
+    _identity = widget.initialIdentity;
     _tabController = TabController(length: 3, vsync: this)
       ..addListener(() {
         if (mounted && !_tabController.indexIsChanging) {
@@ -51,6 +56,21 @@ class _DrugTrackerHomeState extends State<DrugTrackerHome>
     _scrollController.dispose();
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<UserIdentity> _importMnemonic(String mnemonic) async {
+    final identity =
+        await UserIdentityService.instance.importMnemonic(mnemonic);
+    await DatabaseHelper.instance.configureForUser(identity.userId);
+    if (!mounted) {
+      return identity;
+    }
+    setState(() {
+      _identity = identity;
+    });
+    await _loadDrugs();
+    await _loadRecords();
+    return identity;
   }
 
   Future<void> _loadDrugs() async {
@@ -405,6 +425,8 @@ class _DrugTrackerHomeState extends State<DrugTrackerHome>
                 onImport: _importFromCsv,
                 onExport: _exportToCsv,
                 onDrugsChanged: _loadDrugs,
+                identity: _identity,
+                onImportMnemonic: _importMnemonic,
               ),
             ),
           ],
