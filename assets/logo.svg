@@ -1,39 +1,47 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bgGradient" x1="95" y1="70" x2="417" y2="442" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#1C3C73"/>
-      <stop offset="0.5" stop-color="#274D90"/>
-      <stop offset="1" stop-color="#2D5BA8"/>
+    <linearGradient id="badgeGradient" x1="104" y1="96" x2="408" y2="416" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#081229"/>
+      <stop offset="1" stop-color="#14285A"/>
     </linearGradient>
-    <linearGradient id="pillGradient" x1="140" y1="220" x2="372" y2="328" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#F6F7FB"/>
-      <stop offset="1" stop-color="#D8E1F3"/>
+    <linearGradient id="innerGlow" x1="256" y1="132" x2="256" y2="380" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#335EF7" stop-opacity="0.65"/>
+      <stop offset="0.55" stop-color="#47A2FF" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#4ED2FF" stop-opacity="0.2"/>
     </linearGradient>
-    <clipPath id="badgeClip">
-      <rect x="96" y="96" width="320" height="320" rx="64"/>
-    </clipPath>
-  </defs>
-  <g clip-path="url(#badgeClip)">
-    <rect x="96" y="96" width="320" height="320" rx="64" fill="url(#bgGradient)"/>
-    <path opacity="0.25" d="M96 320L320 96H416V416H96V320Z" fill="#10274E"/>
-    <g filter="url(#shadow)">
-      <path d="M192 208C192 189.908 206.908 175 225 175H287C318.48 175 344 200.52 344 232V280C344 311.48 318.48 337 287 337H225C206.908 337 192 322.092 192 304V208Z" fill="url(#pillGradient)"/>
-    </g>
-    <path d="M224 212C224 203.163 231.163 196 240 196H272C280.837 196 288 203.163 288 212V276C288 284.837 280.837 292 272 292H240C231.163 292 224 284.837 224 276V212Z" fill="#2D5BA8"/>
-    <path d="M208 252H304" stroke="#1C3C73" stroke-width="18" stroke-linecap="round"/>
-    <path d="M256 208V300" stroke="#F6F7FB" stroke-width="16" stroke-linecap="round"/>
-  </g>
-  <path d="M164 392H348" stroke="#9FB4DA" stroke-width="6" stroke-linecap="round" opacity="0.45"/>
-  <defs>
-    <filter id="shadow" x="152" y="135" width="232" height="242" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    <linearGradient id="pillGradient" x1="208" y1="208" x2="320" y2="320" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E3ECFF"/>
+    </linearGradient>
+    <radialGradient id="pulseGradient" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(256 256) rotate(90) scale(160)">
+      <stop stop-color="#5CF0FF" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#5CF0FF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="softShadow" x="92" y="92" width="328" height="340" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
       <feFlood flood-opacity="0" result="BackgroundImageFix"/>
-      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
       <feOffset dy="12"/>
       <feGaussianBlur stdDeviation="20"/>
-      <feColorMatrix type="matrix" values="0 0 0 0 0.0941176 0 0 0 0 0.213725 0 0 0 0 0.396078 0 0 0 0.25 0"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.062 0 0 0 0 0.156 0 0 0 0 0.325 0 0 0 0.22 0"/>
       <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow"/>
       <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape"/>
     </filter>
+    <clipPath id="badgeClip">
+      <rect x="112" y="112" width="288" height="288" rx="72"/>
+    </clipPath>
   </defs>
+  <rect x="96" y="96" width="320" height="320" rx="88" fill="#040610"/>
+  <g filter="url(#softShadow)">
+    <rect x="112" y="112" width="288" height="288" rx="72" fill="url(#badgeGradient)"/>
+    <rect x="112" y="112" width="288" height="288" rx="72" fill="url(#innerGlow)"/>
+  </g>
+  <g clip-path="url(#badgeClip)">
+    <circle cx="256" cy="256" r="160" fill="url(#pulseGradient)"/>
+    <path d="M188 228C188 205.909 205.909 188 228 188H320C342.091 188 360 205.909 360 228V284C360 306.091 342.091 324 320 324H228C205.909 324 188 306.091 188 284V228Z" fill="url(#pillGradient)"/>
+    <path d="M228 220C228 205.64 239.64 194 254 194H294C308.36 194 320 205.64 320 220V292C320 306.36 308.36 318 294 318H254C239.64 318 228 306.36 228 292V220Z" fill="#1A3A7A"/>
+    <path d="M214 256H334" stroke="#19336A" stroke-width="20" stroke-linecap="round"/>
+    <path d="M274 208V304" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round"/>
+    <path d="M238 208V304" stroke="#6CC7FF" stroke-width="10" stroke-linecap="round" stroke-opacity="0.6"/>
+    <circle cx="272" cy="256" r="64" fill="url(#pulseGradient)" opacity="0.35"/>
+  </g>
+  <path d="M188 380H324" stroke="#5CF0FF" stroke-width="8" stroke-linecap="round" stroke-opacity="0.3"/>
 </svg>
-

@@ -12,7 +12,6 @@ class DatabaseHelper {
   // Singleton pattern
   DatabaseHelper._privateConstructor();
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
-
   static Database? _database;
   static bool _initialized = false;
 
@@ -102,10 +101,7 @@ class DatabaseHelper {
   // CRUD operations for drugs
   Future<List<Drug>> getAllDrugs() async {
     final db = await database;
-    final results = await db.query(
-      'drugs',
-      orderBy: 'name COLLATE NOCASE ASC',
-    );
+    final results = await db.query('drugs', orderBy: 'name COLLATE NOCASE ASC');
     return results.map(Drug.fromMap).toList();
   }
 
@@ -176,11 +172,7 @@ class DatabaseHelper {
 
   Future<int> deleteDrug(int id) async {
     final db = await database;
-    return await db.delete(
-      'drugs',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    return await db.delete('drugs', where: 'id = ?', whereArgs: [id]);
   }
 
   // Batch insert multiple drug records

@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:drugs_taken/database/database_helper.dart';
 import 'package:drugs_taken/models/drug.dart';
 import 'package:drugs_taken/models/drug_record.dart';
@@ -201,8 +201,8 @@ class _DrugTrackerHomeState extends State<DrugTrackerHome>
         return;
       }
 
-      final insertedCount = await DatabaseHelper.instance
-          .batchInsertDrugRecords(records);
+      final insertedCount =
+          await DatabaseHelper.instance.batchInsertDrugRecords(records);
 
       if (mounted) {
         Navigator.pop(context);
@@ -321,7 +321,29 @@ class _DrugTrackerHomeState extends State<DrugTrackerHome>
         backgroundColor: Colors.transparent,
         appBar: AppBar(
           titleSpacing: 24,
-          title: const SafeArea(bottom: false, child: SizedBox(height: 36)),
+          title: SafeArea(
+            bottom: false,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SvgPicture.asset(
+                  'assets/logo.svg',
+                  height: 32,
+                  semanticsLabel: 'Drugs Taken brand',
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Drug Tracker',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
           flexibleSpace: Container(
             decoration: const BoxDecoration(
               gradient: AppTheme.appBarGradient,
@@ -428,10 +450,10 @@ class _EmptyState extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  Icon(
-                    Icons.medication_outlined,
-                    size: 56,
-                    color: Theme.of(context).colorScheme.secondary,
+                  SvgPicture.asset(
+                    'assets/logo.svg',
+                    height: 72,
+                    semanticsLabel: 'Drugs Taken brand',
                   ),
                   const SizedBox(height: 16),
                   const Text(

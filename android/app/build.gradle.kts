@@ -17,7 +17,7 @@ val keystoreProperties = Properties().apply {
 }
 
 android {
-    namespace = "com.example.drugs_taken"
+    namespace = "uk.co.rodderscode.drugs_taken"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -31,7 +31,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.drugs_taken"
+        applicationId = "uk.co.rodderscode.drugs_taken"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -87,4 +87,8 @@ if (googleServices.exists()) {
     apply(plugin = "com.google.firebase.crashlytics")
 } else {
     logger.lifecycle("google-services.json not found. Skipping Google services and Crashlytics Gradle plugins.")
+}
+
+dependencies {
+    implementation("com.google.android.play:core:1.10.3")
 }
