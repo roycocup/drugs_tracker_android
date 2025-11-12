@@ -18,6 +18,7 @@ void main() {
           'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
       userId: 'test-user-id',
     );
+    await DatabaseHelper.instance.resetUserContext();
     await DatabaseHelper.instance.configureForUser(testIdentity.userId);
 
     await tester.pumpWidget(MyApp(initialIdentity: testIdentity));

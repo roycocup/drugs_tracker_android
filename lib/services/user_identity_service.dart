@@ -5,8 +5,9 @@ import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class InvalidMnemonicException implements Exception {
-  const InvalidMnemonicException(
-      [this.message = 'The provided mnemonic is invalid.']);
+  const InvalidMnemonicException([
+    this.message = 'The provided mnemonic is invalid.',
+  ]);
 
   final String message;
 
@@ -68,6 +69,12 @@ class UserIdentityService {
     }
 
     return UserIdentity(mnemonic: mnemonic, userId: userId);
+  }
+
+  Future<void> clearIdentity() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_mnemonicKey);
+    await prefs.remove(_userIdKey);
   }
 
   Future<String?> _getMnemonic() async {

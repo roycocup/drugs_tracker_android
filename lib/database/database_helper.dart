@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../config/drug_config.dart';
@@ -117,8 +118,9 @@ class DatabaseHelper {
         }
         await txn.execute('DROP TABLE drugs_old');
 
-        await txn
-            .execute('ALTER TABLE drug_records RENAME TO drug_records_old');
+        await txn.execute(
+          'ALTER TABLE drug_records RENAME TO drug_records_old',
+        );
         await txn.execute('''
           CREATE TABLE drug_records(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -178,14 +180,10 @@ class DatabaseHelper {
     String userId,
   ) async {
     for (final drug in DrugConfig.defaultDrugs) {
-      await db.insert(
-        'drugs',
-        {
-          ...drug.toInsertMap(),
-          'user_id': userId,
-        },
-        conflictAlgorithm: ConflictAlgorithm.ignore,
-      );
+      await db.insert('drugs', {
+        ...drug.toInsertMap(),
+        'user_id': userId,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
   }
 
@@ -245,6 +243,10 @@ class DatabaseHelper {
     return userId;
   }
 
+  Future<void> resetUserContext() async {
+    _userId = null;
+  }
+
   // Insert a new drug record
   Future<int> insertDrugRecord(DrugRecord record) async {
     final db = await database;
@@ -301,14 +303,10 @@ class DatabaseHelper {
   Future<int> insertDrug(Drug drug) async {
     final db = await database;
     final userId = _requireUserId();
-    return await db.insert(
-      'drugs',
-      {
-        ...drug.toInsertMap(),
-        'user_id': userId,
-      },
-      conflictAlgorithm: ConflictAlgorithm.abort,
-    );
+    return await db.insert('drugs', {
+      ...drug.toInsertMap(),
+      'user_id': userId,
+    }, conflictAlgorithm: ConflictAlgorithm.abort);
   }
 
   Future<void> updateDrug({
@@ -324,10 +322,7 @@ class DatabaseHelper {
     await db.transaction((txn) async {
       await txn.update(
         'drugs',
-        {
-          ...updatedDrug.toInsertMap(),
-          'user_id': userId,
-        },
+        {...updatedDrug.toInsertMap(), 'user_id': userId},
         where: 'id = ? AND user_id = ?',
         whereArgs: [updatedDrug.id, userId],
       );

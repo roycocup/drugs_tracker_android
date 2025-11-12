@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 
 import '../database/database_helper.dart';
+import '../models/drug.dart';
 import '../models/drug_record.dart';
 
 class CsvImportService {
@@ -64,9 +65,17 @@ class CsvImportService {
         if (quantity.isEmpty) continue;
 
         // Determine the drug configuration
-        final drugConfig = drugByName[drugName];
+        var drugConfig = drugByName[drugName];
         if (drugConfig == null) {
-          throw Exception('Unknown drug: $drugName');
+          drugConfig = await _ensureDrugForImport(
+            drugName: drugName,
+            quantity: quantity,
+            drugByName: drugByName,
+            lines: lines,
+            currentLineIndex: i,
+            drugNameIndex: drugNameIndex,
+            quantityIndex: quantityIndex,
+          );
         }
 
         // Convert quantity to mg
@@ -120,6 +129,92 @@ class CsvImportService {
     }
 
     return records;
+  }
+
+  static Future<Drug> _ensureDrugForImport({
+    required String drugName,
+    required String quantity,
+    required Map<String, Drug> drugByName,
+    required List<String> lines,
+    required int currentLineIndex,
+    required int drugNameIndex,
+    required int quantityIndex,
+  }) async {
+    final existing = drugByName[drugName];
+    if (existing != null) {
+      return existing;
+    }
+
+    final inferredTabletDose = _inferTabletDose(
+      drugName: drugName,
+      quantity: quantity,
+      lines: lines,
+      currentLineIndex: currentLineIndex,
+      drugNameIndex: drugNameIndex,
+      quantityIndex: quantityIndex,
+    );
+
+    final tabletDoseMg = inferredTabletDose != null && inferredTabletDose > 0
+        ? inferredTabletDose
+        : 1.0;
+
+    final newDrug = Drug(name: drugName, tabletDoseMg: tabletDoseMg);
+    try {
+      final id = await DatabaseHelper.instance.insertDrug(newDrug);
+      final stored = newDrug.copyWith(id: id);
+      drugByName[drugName] = stored;
+      return stored;
+    } catch (e) {
+      debugPrint('Failed to insert new drug $drugName: $e');
+      final fetched = await DatabaseHelper.instance.getDrugByName(drugName);
+      if (fetched != null) {
+        drugByName[drugName] = fetched;
+        return fetched;
+      }
+      rethrow;
+    }
+  }
+
+  static double? _inferTabletDose({
+    required String drugName,
+    required String quantity,
+    required List<String> lines,
+    required int currentLineIndex,
+    required int drugNameIndex,
+    required int quantityIndex,
+  }) {
+    final numeric = _parseNumericQuantity(quantity);
+    if (numeric != null && numeric > 0) {
+      return numeric;
+    }
+
+    for (int j = currentLineIndex + 1; j < lines.length; j++) {
+      final candidateLine = lines[j].trim();
+      if (candidateLine.isEmpty) continue;
+
+      final values = _parseCsvLine(candidateLine);
+      if (drugNameIndex >= values.length || quantityIndex >= values.length) {
+        continue;
+      }
+
+      final candidateName = values[drugNameIndex].trim();
+      if (candidateName != drugName) {
+        continue;
+      }
+
+      final candidateQuantity = values[quantityIndex].trim();
+      final candidateNumeric = _parseNumericQuantity(candidateQuantity);
+      if (candidateNumeric != null && candidateNumeric > 0) {
+        return candidateNumeric;
+      }
+    }
+
+    return null;
+  }
+
+  static double? _parseNumericQuantity(String quantity) {
+    final normalized = quantity.replaceAll(',', '.');
+    return double.tryParse(normalized);
   }
 
   /// Parses a CSV line handling quoted values

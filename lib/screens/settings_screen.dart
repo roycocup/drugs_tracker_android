@@ -14,6 +14,7 @@ class SettingsScreen extends StatefulWidget {
   final Future<void> Function()? onDrugsChanged;
   final UserIdentity identity;
   final Future<UserIdentity> Function(String mnemonic) onImportMnemonic;
+  final Future<UserIdentity> Function() onLogout;
 
   const SettingsScreen({
     super.key,
@@ -22,6 +23,7 @@ class SettingsScreen extends StatefulWidget {
     this.onDrugsChanged,
     required this.identity,
     required this.onImportMnemonic,
+    required this.onLogout,
   });
 
   @override
@@ -145,6 +147,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _identity = importedIdentity!;
       });
       await _loadDrugs();
+      if (widget.onDrugsChanged != null) {
+        await widget.onDrugsChanged!();
+      }
       if (!mounted) {
         return;
       }
@@ -159,8 +164,69 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _handleLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Log Out'),
+        content: const Text(
+          'Logging out will generate a new mnemonic for this device. '
+          'Keep a copy of your current mnemonic if you want to return to this account later.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            child: const Text('Log Out'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    try {
+      final identity = await widget.onLogout();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _identity = identity;
+      });
+      await _loadDrugs();
+      if (widget.onDrugsChanged != null) {
+        await widget.onDrugsChanged!();
+      }
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Logged out. A new mnemonic was created.'),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to log out. Please try again.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
   }
 
   Widget _buildIdentityCard(BuildContext context) {
@@ -176,9 +242,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text(
               'Account',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 12),
             const Text(
@@ -221,9 +287,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text(
               'User ID',
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: Colors.white70,
-                    fontWeight: FontWeight.w600,
-                  ),
+                color: Colors.white70,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 8),
             Container(
@@ -265,6 +331,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: const Icon(Icons.key),
               label: const Text('Import Mnemonic'),
             ),
+            const SizedBox(height: 12),
+            TextButton.icon(
+              onPressed: _handleLogout,
+              icon: const Icon(Icons.logout),
+              label: const Text('Log Out'),
+              style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            ),
           ],
         ),
       ),
@@ -300,8 +373,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final doseController = TextEditingController(
       text: drug != null
           ? (drug.tabletDoseMg % 1 == 0
-              ? drug.tabletDoseMg.toStringAsFixed(0)
-              : drug.tabletDoseMg.toStringAsFixed(2))
+                ? drug.tabletDoseMg.toStringAsFixed(0)
+                : drug.tabletDoseMg.toStringAsFixed(2))
           : '',
     );
     final formKey = GlobalKey<FormState>();
@@ -425,9 +498,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (result == true) {
       await _refreshDrugs();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Drug added successfully')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Drug added successfully')));
     }
   }
 
@@ -473,9 +546,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await DatabaseHelper.instance.deleteDrug(drug.id!);
       await _refreshDrugs();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${drug.name} deleted')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('${drug.name} deleted')));
     }
   }
 
@@ -524,9 +597,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text(
               'Drug Catalog',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 16),
             if (_isLoadingDrugs)
@@ -592,9 +665,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Text(
                     'Data Management',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton.icon(

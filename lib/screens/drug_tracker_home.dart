@@ -59,8 +59,25 @@ class _DrugTrackerHomeState extends State<DrugTrackerHome>
   }
 
   Future<UserIdentity> _importMnemonic(String mnemonic) async {
-    final identity =
-        await UserIdentityService.instance.importMnemonic(mnemonic);
+    final identity = await UserIdentityService.instance.importMnemonic(
+      mnemonic,
+    );
+    await DatabaseHelper.instance.configureForUser(identity.userId);
+    if (!mounted) {
+      return identity;
+    }
+    setState(() {
+      _identity = identity;
+    });
+    await _loadDrugs();
+    await _loadRecords();
+    return identity;
+  }
+
+  Future<UserIdentity> _logout() async {
+    await UserIdentityService.instance.clearIdentity();
+    await DatabaseHelper.instance.resetUserContext();
+    final identity = await UserIdentityService.instance.getOrCreateIdentity();
     await DatabaseHelper.instance.configureForUser(identity.userId);
     if (!mounted) {
       return identity;
@@ -189,11 +206,7 @@ class _DrugTrackerHomeState extends State<DrugTrackerHome>
   Future<void> _editRecord(DrugRecord record) async {
     final result = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(
-        builder: (context) => AddRecordScreen(
-          record: record,
-        ),
-      ),
+      MaterialPageRoute(builder: (context) => AddRecordScreen(record: record)),
     );
 
     if (result == true) {
@@ -221,8 +234,8 @@ class _DrugTrackerHomeState extends State<DrugTrackerHome>
         return;
       }
 
-      final insertedCount =
-          await DatabaseHelper.instance.batchInsertDrugRecords(records);
+      final insertedCount = await DatabaseHelper.instance
+          .batchInsertDrugRecords(records);
 
       if (mounted) {
         Navigator.pop(context);
@@ -427,6 +440,7 @@ class _DrugTrackerHomeState extends State<DrugTrackerHome>
                 onDrugsChanged: _loadDrugs,
                 identity: _identity,
                 onImportMnemonic: _importMnemonic,
+                onLogout: _logout,
               ),
             ),
           ],
