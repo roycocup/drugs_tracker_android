@@ -23,6 +23,7 @@ class DatabaseHelper {
     if (!_initialized) {
       if (!kIsWeb &&
           (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+        sqfliteFfiInit();
         databaseFactory = databaseFactoryFfi;
       }
       _initialized = true;
