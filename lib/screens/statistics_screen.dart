@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../database/database_helper.dart';
 import '../models/drug.dart';
+import '../widgets/gradient_scaffold.dart';
 
 class StatisticsScreenInitialData {
   final Map<String, (String label, DateTimeRange range)> presetRanges;
@@ -482,71 +483,78 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    return RefreshIndicator(
-      onRefresh: _refresh,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-        children: [
-          for (final entry in _presetRanges.entries)
-            _buildTotalsCard(
-              title: entry.value.$1,
-              range: entry.value.$2,
-              totals: _presetTotals[entry.key] ?? const <String, double>{},
-              showPie: _showPieForPreset[entry.key] ?? false,
-              onShowPieChanged: (value) {
-                setState(() {
-                  _showPieForPreset = {..._showPieForPreset, entry.key: value};
-                });
-              },
-            ),
-          Card(
-            margin: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Custom Range',
-                    style: Theme.of(context).textTheme.titleMedium,
+    final content = _isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                for (final entry in _presetRanges.entries)
+                  _buildTotalsCard(
+                    title: entry.value.$1,
+                    range: entry.value.$2,
+                    totals: _presetTotals[entry.key] ?? const <String, double>{},
+                    showPie: _showPieForPreset[entry.key] ?? false,
+                    onShowPieChanged: (value) {
+                      setState(() {
+                        _showPieForPreset = {..._showPieForPreset, entry.key: value};
+                      });
+                    },
                   ),
-                  const SizedBox(height: 12.0),
-                  ElevatedButton.icon(
-                    onPressed: _isCustomLoading ? null : _selectCustomRange,
-                    icon: const Icon(Icons.date_range),
-                    label: const Text('Select Date Range'),
-                  ),
-                  if (_isCustomLoading)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 12.0),
-                      child: LinearProgressIndicator(),
-                    )
-                  else if (_customRange == null)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 12.0),
-                      child: Text('Choose a range to see totals'),
-                    )
-                  else ...[
-                    Padding(
-                      padding: const EdgeInsets.only(top: 12.0),
-                      child: Text(
-                        _formatRange(_customRange!),
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
+                Card(
+                  margin: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Custom Range',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 12.0),
+                        ElevatedButton.icon(
+                          onPressed: _isCustomLoading ? null : _selectCustomRange,
+                          icon: const Icon(Icons.date_range),
+                          label: const Text('Select Date Range'),
+                        ),
+                        if (_isCustomLoading)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 12.0),
+                            child: LinearProgressIndicator(),
+                          )
+                        else if (_customRange == null)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 12.0),
+                            child: Text('Choose a range to see totals'),
+                          )
+                        else ...[
+                          Padding(
+                            padding: const EdgeInsets.only(top: 12.0),
+                            child: Text(
+                              _formatRange(_customRange!),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                          const SizedBox(height: 12.0),
+                          _buildCustomTotalsSection(),
+                        ],
+                      ],
                     ),
-                    const SizedBox(height: 12.0),
-                    _buildCustomTotalsSection(),
-                  ],
-                ],
-              ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
+          );
+
+    return GradientScaffold(
+      title: const Text('Statistics'),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+          child: content,
+        ),
       ),
     );
   }

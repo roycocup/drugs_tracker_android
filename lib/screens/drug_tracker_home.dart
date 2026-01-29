@@ -12,6 +12,7 @@ import 'package:drugs_taken/services/csv_export_service.dart';
 import 'package:drugs_taken/services/csv_import_service.dart';
 import 'package:drugs_taken/services/user_identity_service.dart';
 import 'package:drugs_taken/theme/app_theme.dart';
+import 'package:drugs_taken/widgets/gradient_scaffold.dart';
 import 'package:drugs_taken/widgets/record_list_item.dart';
 
 class DrugTrackerHome extends StatefulWidget {
@@ -262,15 +263,6 @@ class _DrugTrackerHomeState extends State<DrugTrackerHome>
   }
 
   Future<void> _exportToCsv() async {
-    if (_records.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No records available to export')),
-        );
-      }
-      return;
-    }
-
     try {
       showDialog(
         context: context,
@@ -278,9 +270,19 @@ class _DrugTrackerHomeState extends State<DrugTrackerHome>
         builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
-      final exportedPath = await CsvExportService.exportToCsvFile(
-        List.of(_records),
-      );
+      final allRecords = await DatabaseHelper.instance.getAllDrugRecords();
+
+      if (allRecords.isEmpty) {
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No records available to export')),
+          );
+        }
+        return;
+      }
+
+      final exportedPath = await CsvExportService.exportToCsvFile(allRecords);
 
       if (mounted) {
         Navigator.pop(context);
@@ -348,111 +350,102 @@ class _DrugTrackerHomeState extends State<DrugTrackerHome>
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          titleSpacing: 24,
-          title: SafeArea(
-            bottom: false,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SvgPicture.asset(
-                  'assets/logo.svg',
-                  height: 32,
-                  semanticsLabel: 'Drugs Taken brand',
-                ),
-                const SizedBox(width: 12),
-                const Text(
-                  'Drug Tracker',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 20,
-                    letterSpacing: 0.2,
-                  ),
-                ),
-              ],
-            ),
+    final tabBar = PreferredSize(
+      preferredSize: const Size.fromHeight(56),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white24),
           ),
-          flexibleSpace: Container(
-            decoration: const BoxDecoration(
-              gradient: AppTheme.appBarGradient,
-              border: Border(bottom: BorderSide(color: Colors.white10)),
-            ),
-          ),
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(56),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white24),
-                ),
-                child: TabBar(
-                  controller: _tabController,
-                  indicator: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    gradient: LinearGradient(
-                      colors: [
-                        Theme.of(context).colorScheme.secondary,
-                        Theme.of(context).colorScheme.primary,
-                      ],
-                    ),
-                  ),
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  labelColor: Colors.white,
-                  unselectedLabelColor: Colors.white70,
-                  dividerColor: Colors.transparent,
-                  labelStyle: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.4,
-                  ),
-                  tabs: const [
-                    Tab(icon: Icon(Icons.list), text: 'Records'),
-                    Tab(icon: Icon(Icons.analytics), text: 'Statistics'),
-                    Tab(icon: Icon(Icons.settings), text: 'Settings'),
-                  ],
-                ),
+          child: TabBar(
+            controller: _tabController,
+            indicator: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              gradient: LinearGradient(
+                colors: [
+                  Theme.of(context).colorScheme.secondary,
+                  Theme.of(context).colorScheme.primary,
+                ],
               ),
             ),
+            indicatorSize: TabBarIndicatorSize.tab,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            dividerColor: Colors.transparent,
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.4,
+            ),
+            tabs: const [
+              Tab(icon: Icon(Icons.list), text: 'Records'),
+              Tab(icon: Icon(Icons.analytics), text: 'Statistics'),
+              Tab(icon: Icon(Icons.settings), text: 'Settings'),
+            ],
           ),
-          actions: const [SizedBox(width: 12)],
         ),
-        body: TabBarView(
-          controller: _tabController,
+      ),
+    );
+
+    return GradientScaffold(
+      titleSpacing: 24,
+      extendBodyBehindAppBar: true,
+      title: SafeArea(
+        bottom: false,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: _buildRecordsContent(),
-              ),
+            SvgPicture.asset(
+              'assets/logo.svg',
+              height: 32,
+              semanticsLabel: 'Drugs Taken brand',
             ),
-            const SafeArea(child: StatisticsScreen()),
-            SafeArea(
-              child: SettingsScreen(
-                onImport: _importFromCsv,
-                onExport: _exportToCsv,
-                onDrugsChanged: _loadDrugs,
-                identity: _identity,
-                onImportMnemonic: _importMnemonic,
-                onLogout: _logout,
+            const SizedBox(width: 12),
+            const Text(
+              'Drug Tracker',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 20,
+                letterSpacing: 0.2,
               ),
             ),
           ],
         ),
-        floatingActionButton: _tabController.index == 0
-            ? FloatingActionButton.extended(
-                onPressed: _addNewRecord,
-                icon: const Icon(Icons.add, size: 26),
-                label: const Text('Add Record'),
-              )
-            : null,
       ),
+      bottom: tabBar,
+      actions: const [SizedBox(width: 12)],
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: _buildRecordsContent(),
+            ),
+          ),
+          const SafeArea(child: StatisticsScreen()),
+          SafeArea(
+            child: SettingsScreen(
+              onImport: _importFromCsv,
+              onExport: _exportToCsv,
+              onDrugsChanged: _loadDrugs,
+              identity: _identity,
+              onImportMnemonic: _importMnemonic,
+              onLogout: _logout,
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: _tabController.index == 0
+          ? FloatingActionButton.extended(
+              onPressed: _addNewRecord,
+              icon: const Icon(Icons.add, size: 26),
+              label: const Text('Add Record'),
+            )
+          : null,
     );
   }
 }

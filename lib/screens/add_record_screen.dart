@@ -4,6 +4,7 @@ import '../database/database_helper.dart';
 import '../models/drug.dart';
 import '../models/drug_record.dart';
 import '../theme/app_theme.dart';
+import '../widgets/gradient_scaffold.dart';
 
 class AddRecordScreen extends StatefulWidget {
   final DrugRecord? record;
@@ -166,154 +167,142 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          title: Text(_isEditing ? 'Edit Drug Record' : 'Add Drug Record'),
-          flexibleSpace: Container(
-            decoration: const BoxDecoration(
-              gradient: AppTheme.appBarGradient,
-              border: Border(bottom: BorderSide(color: Colors.white10)),
-            ),
+    return GradientScaffold(
+      title: Text(_isEditing ? 'Edit Drug Record' : 'Add Drug Record'),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 20.0,
+            vertical: 24.0,
           ),
-        ),
-        body: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 20.0,
-              vertical: 24.0,
+          children: [
+            Text(
+              'Capture dosage, timing, and medication details so you can spot trends later.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
             ),
-            children: [
-              Text(
-                'Capture dosage, timing, and medication details so you can spot trends later.',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
-              ),
-              const SizedBox(height: 28.0),
+            const SizedBox(height: 28.0),
 
-              // Drug Selection
-              if (_isLoadingDrugs)
-                const SizedBox(
-                  height: 56,
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else if (_availableDrugs.isEmpty)
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white12),
-                  ),
-                  child: Text(
-                    'No drugs available. Add drugs in the settings tab before creating records.',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
-                  ),
-                )
-              else
-                DropdownMenu<String>(
-                  initialSelection: _selectedDrug,
-                  label: const Text('Drug'),
-                  dropdownMenuEntries: _availableDrugs.map((Drug drug) {
-                    final doseText = drug.tabletDoseMg % 1 == 0
-                        ? drug.tabletDoseMg.toStringAsFixed(0)
-                        : drug.tabletDoseMg.toStringAsFixed(1);
-                    return DropdownMenuEntry<String>(
-                      value: drug.name,
-                      label: '${drug.name} (${doseText}mg)',
-                    );
-                  }).toList(),
-                  onSelected: (String? newValue) {
-                    setState(() {
-                      _selectedDrug = newValue;
-                    });
-                  },
+            // Drug Selection
+            if (_isLoadingDrugs)
+              const SizedBox(
+                height: 56,
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_availableDrugs.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white12),
                 ),
-              const SizedBox(height: 24.0),
-
-              // Date Selection
-              InkWell(
-                onTap: () => _selectDate(context),
-                borderRadius: BorderRadius.circular(14),
-                child: InputDecorator(
-                  decoration: const InputDecoration(labelText: 'Date'),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(DateFormat('yyyy-MM-dd').format(_selectedDate)),
-                      Icon(
-                        Icons.calendar_today,
-                        color: Theme.of(context).colorScheme.secondary,
-                        size: 20,
-                      ),
-                    ],
-                  ),
+                child: Text(
+                  'No drugs available. Add drugs in the settings tab before creating records.',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
                 ),
-              ),
-              const SizedBox(height: 24.0),
-
-              // Time Selection
-              InkWell(
-                onTap: () => _selectTime(context),
-                borderRadius: BorderRadius.circular(14),
-                child: InputDecorator(
-                  decoration: const InputDecoration(labelText: 'Time'),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(_selectedTime.format(context)),
-                      Icon(
-                        Icons.access_time,
-                        color: Theme.of(context).colorScheme.secondary,
-                        size: 20,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24.0),
-
-              // Dose Input
-              TextFormField(
-                controller: _doseController,
-                decoration: InputDecoration(
-                  labelText: 'Dose',
-                  hintText: _currentDrug == null
-                      ? 'e.g., 1/2, 1/4, or a number'
-                      : 'e.g., 1/2 (${_formatDose(_currentDrug!.tabletDoseMg / 2)}mg), 1/4, or mg',
-                  helperText: _currentDrug == null
-                      ? 'Select a drug first'
-                      : '1 tablet = ${_formatDose(_currentDrug!.tabletDoseMg)}mg',
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a dose';
-                  }
-                  // Validation will be done in _saveRecord for proper fraction handling
-                  return null;
+              )
+            else
+              DropdownMenu<String>(
+                initialSelection: _selectedDrug,
+                label: const Text('Drug'),
+                dropdownMenuEntries: _availableDrugs.map((Drug drug) {
+                  final doseText = drug.tabletDoseMg % 1 == 0
+                      ? drug.tabletDoseMg.toStringAsFixed(0)
+                      : drug.tabletDoseMg.toStringAsFixed(1);
+                  return DropdownMenuEntry<String>(
+                    value: drug.name,
+                    label: '${drug.name} (${doseText}mg)',
+                  );
+                }).toList(),
+                onSelected: (String? newValue) {
+                  setState(() {
+                    _selectedDrug = newValue;
+                  });
                 },
               ),
-              const SizedBox(height: 36.0),
+            const SizedBox(height: 24.0),
 
-              // Save Button
-              ElevatedButton.icon(
-                onPressed: _saveRecord,
-                icon: Icon(
-                  _isEditing ? Icons.check_circle_outline : Icons.save_outlined,
-                ),
-                label: Text(
-                  _isEditing ? 'Update Record' : 'Save Record',
-                  style: const TextStyle(fontSize: 16.0),
+            // Date Selection
+            InkWell(
+              onTap: () => _selectDate(context),
+              borderRadius: BorderRadius.circular(14),
+              child: InputDecorator(
+                decoration: const InputDecoration(labelText: 'Date'),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(DateFormat('yyyy-MM-dd').format(_selectedDate)),
+                    Icon(
+                      Icons.calendar_today,
+                      color: Theme.of(context).colorScheme.secondary,
+                      size: 20,
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 24.0),
+
+            // Time Selection
+            InkWell(
+              onTap: () => _selectTime(context),
+              borderRadius: BorderRadius.circular(14),
+              child: InputDecorator(
+                decoration: const InputDecoration(labelText: 'Time'),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(_selectedTime.format(context)),
+                    Icon(
+                      Icons.access_time,
+                      color: Theme.of(context).colorScheme.secondary,
+                      size: 20,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24.0),
+
+            // Dose Input
+            TextFormField(
+              controller: _doseController,
+              decoration: InputDecoration(
+                labelText: 'Dose',
+                hintText: _currentDrug == null
+                    ? 'e.g., 1/2, 1/4, or a number'
+                    : 'e.g., 1/2 (${_formatDose(_currentDrug!.tabletDoseMg / 2)}mg), 1/4, or mg',
+                helperText: _currentDrug == null
+                    ? 'Select a drug first'
+                    : '1 tablet = ${_formatDose(_currentDrug!.tabletDoseMg)}mg',
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter a dose';
+                }
+                // Validation will be done in _saveRecord for proper fraction handling
+                return null;
+              },
+            ),
+            const SizedBox(height: 36.0),
+
+            // Save Button
+            ElevatedButton.icon(
+              onPressed: _saveRecord,
+              icon: Icon(
+                _isEditing ? Icons.check_circle_outline : Icons.save_outlined,
+              ),
+              label: Text(
+                _isEditing ? 'Update Record' : 'Save Record',
+                style: const TextStyle(fontSize: 16.0),
+              ),
+            ),
+          ],
         ),
       ),
     );

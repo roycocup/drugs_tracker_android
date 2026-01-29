@@ -3,10 +3,12 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'package:drugs_taken/database/database_helper.dart';
 import 'package:drugs_taken/models/drug.dart';
 import 'package:drugs_taken/services/user_identity_service.dart';
+import 'package:drugs_taken/widgets/gradient_scaffold.dart';
 
 class SettingsScreen extends StatefulWidget {
   final Future<void> Function() onImport;
@@ -34,12 +36,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isLoadingDrugs = true;
   List<Drug> _drugs = [];
   late UserIdentity _identity;
+  String _version = '';
 
   @override
   void initState() {
     super.initState();
     _identity = widget.identity;
     _loadDrugs();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    setState(() {
+      _version = packageInfo.version;
+    });
   }
 
   @override
@@ -520,35 +531,170 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return;
     }
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete Drug'),
-        content: Text(
-          'Are you sure you want to delete ${drug.name}? '
-          'Existing records will keep this drug name.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    // Check if there are records for this drug
+    final recordCount = await DatabaseHelper.instance.getRecordCountForDrug(
+      drug.name,
     );
 
-    if (confirmed == true) {
-      await DatabaseHelper.instance.deleteDrug(drug.id!);
-      await _refreshDrugs();
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('${drug.name} deleted')));
+    if (recordCount > 0) {
+      // Ask user if they want to transfer records
+      final transferChoice = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Delete Drug'),
+          content: Text(
+            '${drug.name} has $recordCount record(s). '
+            'What would you like to do with these records?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop('cancel'),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop('transfer'),
+              child: const Text('Transfer to Another Drug'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop('delete'),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete Records Too'),
+            ),
+          ],
+        ),
+      );
+
+      if (transferChoice == null || transferChoice == 'cancel') {
+        return;
+      }
+
+      if (transferChoice == 'transfer') {
+        // Show dialog to select target drug
+        final availableDrugs = _drugs.where((d) => d.id != drug.id).toList();
+        if (availableDrugs.isEmpty) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No other drugs available to transfer records to.'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+          return;
+        }
+
+        final selectedDrug = await showDialog<Drug>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Select Drug to Transfer Records To'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: availableDrugs.length,
+                itemBuilder: (context, index) {
+                  final targetDrug = availableDrugs[index];
+                  return ListTile(
+                    title: Text(targetDrug.name),
+                    subtitle: Text(
+                      '1 tablet = ${targetDrug.tabletDoseMg.toStringAsFixed(1)} mg',
+                    ),
+                    onTap: () => Navigator.of(dialogContext).pop(targetDrug),
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+        );
+
+        if (selectedDrug != null) {
+          // Transfer records
+          await DatabaseHelper.instance.transferDrugRecords(
+            fromDrugName: drug.name,
+            toDrugName: selectedDrug.name,
+          );
+          // Delete the drug (records are now transferred)
+          await DatabaseHelper.instance.deleteDrugWithoutRecords(drug.id!);
+          await _refreshDrugs();
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '${drug.name} deleted and $recordCount record(s) transferred to ${selectedDrug.name}',
+              ),
+            ),
+          );
+        }
+      } else if (transferChoice == 'delete') {
+        // Delete drug and all records
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Confirm Deletion'),
+            content: Text(
+              'Are you sure you want to delete ${drug.name} '
+              'and all $recordCount associated record(s)? '
+              'This action cannot be undone.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+        );
+
+        if (confirmed == true) {
+          await DatabaseHelper.instance.deleteDrug(drug.id!);
+          await _refreshDrugs();
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${drug.name} and $recordCount record(s) deleted'),
+            ),
+          );
+        }
+      }
+    } else {
+      // No records, just delete the drug
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Delete Drug'),
+          content: Text('Are you sure you want to delete ${drug.name}?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed == true) {
+        await DatabaseHelper.instance.deleteDrugWithoutRecords(drug.id!);
+        await _refreshDrugs();
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('${drug.name} deleted')));
+      }
     }
   }
 
@@ -644,64 +790,80 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: ListView(
-        children: [
-          _buildIdentityCard(context),
-          const SizedBox(height: 16),
-          _buildDrugManagementCard(context),
-          const SizedBox(height: 16),
-          Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            color: Colors.white.withValues(alpha: 0.08),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Data Management',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () async => widget.onImport(),
-                    icon: const Icon(Icons.upload_file),
-                    label: const Text('Import from CSV'),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+    return GradientScaffold(
+      title: const Text('Settings'),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              _buildIdentityCard(context),
+              const SizedBox(height: 16),
+              _buildDrugManagementCard(context),
+              const SizedBox(height: 16),
+              Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                color: Colors.white.withValues(alpha: 0.08),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Data Management',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: () async => widget.onExport(),
-                    icon: const Icon(Icons.download),
-                    label: const Text('Export to CSV'),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: () async => widget.onImport(),
+                        icon: const Icon(Icons.upload_file),
+                        label: const Text('Import from CSV'),
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(48),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
                       ),
-                      foregroundColor: Colors.white,
-                      side: BorderSide(
-                        color: Theme.of(context).colorScheme.secondary,
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: () async => widget.onExport(),
+                        icon: const Icon(Icons.download),
+                        label: const Text('Export to CSV'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(48),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          foregroundColor: Colors.white,
+                          side: BorderSide(
+                            color: Theme.of(context).colorScheme.secondary,
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
+              const SizedBox(height: 16),
+              Center(
+                child: Text(
+                  'Version $_version',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
