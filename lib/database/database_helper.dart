@@ -339,7 +339,65 @@ class DatabaseHelper {
     });
   }
 
+  // Get the count of records for a drug by name
+  Future<int> getRecordCountForDrug(String drugName) async {
+    final db = await database;
+    final userId = _requireUserId();
+    final result = await db.rawQuery(
+      '''
+      SELECT COUNT(*) as count
+      FROM drug_records
+      WHERE user_id = ? AND drug_name = ?
+      ''',
+      [userId, drugName],
+    );
+    return (result.first['count'] as int?) ?? 0;
+  }
+
+  // Transfer records from one drug name to another
+  Future<int> transferDrugRecords({
+    required String fromDrugName,
+    required String toDrugName,
+  }) async {
+    final db = await database;
+    final userId = _requireUserId();
+    return await db.update(
+      'drug_records',
+      {'drug_name': toDrugName},
+      where: 'user_id = ? AND drug_name = ?',
+      whereArgs: [userId, fromDrugName],
+    );
+  }
+
   Future<int> deleteDrug(int id) async {
+    final db = await database;
+    final userId = _requireUserId();
+
+    // Get the drug to check if it exists and get its name
+    final drug = await getDrugById(id);
+    if (drug == null) {
+      return 0;
+    }
+
+    // Delete records first to handle foreign key constraint
+    // Then delete the drug
+    return await db.transaction((txn) async {
+      await txn.delete(
+        'drug_records',
+        where: 'user_id = ? AND drug_name = ?',
+        whereArgs: [userId, drug.name],
+      );
+      return await txn.delete(
+        'drugs',
+        where: 'id = ? AND user_id = ?',
+        whereArgs: [id, userId],
+      );
+    });
+  }
+
+  // Delete drug without deleting records (only works if no records exist)
+  // This is used after transferring records
+  Future<int> deleteDrugWithoutRecords(int id) async {
     final db = await database;
     final userId = _requireUserId();
     return await db.delete(

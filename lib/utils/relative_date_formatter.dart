@@ -5,23 +5,36 @@ class RelativeDateFormatter {
 
   static String format(DateTime dateTime, {DateTime? reference}) {
     final now = reference ?? DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inSeconds.abs() < 60) {
-      return difference.isNegative ? 'In moments' : 'Just now';
+    
+    // Normalize to start of day for calendar date comparison
+    final recordDate = DateTime(dateTime.year, dateTime.month, dateTime.day);
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    
+    // Check if record is today (00:00 to 23:59 of today's date)
+    if (recordDate == today) {
+      final difference = now.difference(dateTime);
+      if (difference.inSeconds.abs() < 60) {
+        return difference.isNegative ? 'In moments' : 'Just now';
+      }
+      if (difference.isNegative) {
+        return 'Later today';
+      }
+      return 'Today';
     }
-
+    
+    // Check if record is yesterday (00:00 to 23:59 of yesterday's date)
+    if (recordDate == yesterday) {
+      return 'Yesterday';
+    }
+    
+    final difference = now.difference(dateTime);
+    
     if (difference.isNegative) {
       return _formatFuture(dateTime, now);
     }
 
     final days = difference.inDays;
-    if (days == 0) {
-      return 'Today';
-    }
-    if (days == 1) {
-      return 'Yesterday';
-    }
     if (days < 7) {
       return DateFormat('EEEE').format(dateTime);
     }

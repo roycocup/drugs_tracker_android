@@ -351,39 +351,42 @@ class _DrugTrackerHomeState extends State<DrugTrackerHome>
   @override
   Widget build(BuildContext context) {
     final tabBar = PreferredSize(
-      preferredSize: const Size.fromHeight(56),
+      preferredSize: const Size.fromHeight(82),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white24),
-          ),
-          child: TabBar(
-            controller: _tabController,
-            indicator: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              gradient: LinearGradient(
-                colors: [
-                  Theme.of(context).colorScheme.secondary,
-                  Theme.of(context).colorScheme.primary,
-                ],
+        padding: const EdgeInsets.only(top: 10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white24),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              indicator: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).colorScheme.secondary,
+                    Theme.of(context).colorScheme.primary,
+                  ],
+                ),
               ),
+              indicatorSize: TabBarIndicatorSize.tab,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              dividerColor: Colors.transparent,
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.4,
+              ),
+              tabs: const [
+                Tab(icon: Icon(Icons.list), text: 'Records'),
+                Tab(icon: Icon(Icons.analytics), text: 'Statistics'),
+                Tab(icon: Icon(Icons.settings), text: 'Settings'),
+              ],
             ),
-            indicatorSize: TabBarIndicatorSize.tab,
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white70,
-            dividerColor: Colors.transparent,
-            labelStyle: const TextStyle(
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.4,
-            ),
-            tabs: const [
-              Tab(icon: Icon(Icons.list), text: 'Records'),
-              Tab(icon: Icon(Icons.analytics), text: 'Statistics'),
-              Tab(icon: Icon(Icons.settings), text: 'Settings'),
-            ],
           ),
         ),
       ),
@@ -392,28 +395,25 @@ class _DrugTrackerHomeState extends State<DrugTrackerHome>
     return GradientScaffold(
       titleSpacing: 24,
       extendBodyBehindAppBar: true,
-      title: SafeArea(
-        bottom: false,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SvgPicture.asset(
-              'assets/logo.svg',
-              height: 32,
-              semanticsLabel: 'Drugs Taken brand',
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SvgPicture.asset(
+            'assets/logo.svg',
+            height: 32,
+            semanticsLabel: 'Drugs Taken brand',
+          ),
+          const SizedBox(width: 12),
+          const Text(
+            'Drug Tracker',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 20,
+              letterSpacing: 0.2,
             ),
-            const SizedBox(width: 12),
-            const Text(
-              'Drug Tracker',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 20,
-                letterSpacing: 0.2,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
       bottom: tabBar,
       actions: const [SizedBox(width: 12)],

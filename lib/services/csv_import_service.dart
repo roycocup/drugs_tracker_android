@@ -279,6 +279,7 @@ class CsvImportService {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['csv'],
+      dialogTitle: 'Select CSV File',
     );
 
     if (result == null || result.files.single.path == null) {
