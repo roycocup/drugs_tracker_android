@@ -66,8 +66,7 @@ class CsvImportService {
 
         // Determine the drug configuration
         var drugConfig = drugByName[drugName];
-        if (drugConfig == null) {
-          drugConfig = await _ensureDrugForImport(
+        drugConfig ??= await _ensureDrugForImport(
             drugName: drugName,
             quantity: quantity,
             drugByName: drugByName,
@@ -76,7 +75,6 @@ class CsvImportService {
             drugNameIndex: drugNameIndex,
             quantityIndex: quantityIndex,
           );
-        }
 
         // Convert quantity to mg
         final doseInMg = drugConfig.convertFractionToMg(quantity);

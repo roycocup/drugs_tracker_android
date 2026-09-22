@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 import '../database/database_helper.dart';
 import '../models/drug.dart';
 import '../models/drug_record.dart';
-import '../theme/app_theme.dart';
 import '../widgets/gradient_scaffold.dart';
 
 class AddRecordScreen extends StatefulWidget {
